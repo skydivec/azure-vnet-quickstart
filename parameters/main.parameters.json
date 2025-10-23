@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus2"
+    },
+    "vnetName": {
+      "value": "vnet-1"
+    },
+    "vnetAddressPrefix": {
+      "value": "10.0.0.0/16"
+    },
+    "subnetName": {
+      "value": "subnet-1"  
+    },
+    "subnetAddressPrefix": {
+      "value": "10.0.0.0/24"
+    },
+    "enableBastion": {
+      "value": true
+    },
+    "bastionName": {
+      "value": "bastion"
+    },
+    "bastionSubnetPrefix": {
+      "value": "10.0.1.0/26"
+    },
+    "adminUsername": {
+      "value": "azureuser"
+    },
+    "vmSize": {
+      "value": "Standard_B2s"
+    },
+    "ubuntuOSVersion": {
+      "value": "22_04-lts-gen2"
+    }
+  }
+}

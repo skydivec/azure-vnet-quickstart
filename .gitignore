@@ -1,0 +1,35 @@
+# Azure deployment artifacts
+*.json.bak
+deployment-outputs.json
+
+# Bicep compiled outputs  
+*.json
+!parameters/*.json
+!templates/main.json
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Azure CLI cache
+.azure/
+
+# PowerShell modules cache
+PSGetModuleInfo.xml
+
+# Sensitive files (should not be committed)
+secrets.json
+.env
