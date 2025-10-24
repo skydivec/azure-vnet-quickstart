@@ -36,8 +36,15 @@ param adminPassword string
 @description('Virtual machine size')
 param vmSize string = 'Standard_B2s'
 
+@description('Operating system type')
+@allowed(['Ubuntu', 'RHEL'])
+param osType string = 'Ubuntu'
+
 @description('Ubuntu OS version')
 param ubuntuOSVersion string = '22_04-lts-gen2'
+
+@description('RHEL OS version')
+param rhelOSVersion string = '8_10'
 
 // Variables for resource naming
 var bastionPublicIpName = 'public-ip-bastion'
@@ -46,6 +53,19 @@ var vm1Name = 'vm-1'
 var vm2Name = 'vm-2'
 var nic1Name = 'nic-vm-1'
 var nic2Name = 'nic-vm-2'
+
+// Image reference based on OS type
+var imageReference = osType == 'Ubuntu' ? {
+  publisher: 'Canonical'
+  offer: '0001-com-ubuntu-server-jammy'
+  sku: ubuntuOSVersion
+  version: 'latest'
+} : {
+  publisher: 'RedHat'
+  offer: 'RHEL'
+  sku: rhelOSVersion
+  version: 'latest'
+}
 
 // Create Virtual Network with primary subnet
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-09-01' = {
@@ -205,12 +225,7 @@ resource virtualMachine1 'Microsoft.Compute/virtualMachines@2023-09-01' = {
       }
     }
     storageProfile: {
-      imageReference: {
-        publisher: 'Canonical'
-        offer: '0001-com-ubuntu-server-jammy'
-        sku: ubuntuOSVersion
-        version: 'latest'
-      }
+      imageReference: imageReference
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
@@ -225,13 +240,13 @@ resource virtualMachine1 'Microsoft.Compute/virtualMachines@2023-09-01' = {
         }
       ]
     }
-    securityProfile: {
+    securityProfile: osType == 'Ubuntu' ? {
       securityType: 'TrustedLaunch'
       uefiSettings: {
         secureBootEnabled: true
         vTpmEnabled: true
       }
-    }
+    } : null
   }
 }
 
@@ -252,12 +267,7 @@ resource virtualMachine2 'Microsoft.Compute/virtualMachines@2023-09-01' = {
       }
     }
     storageProfile: {
-      imageReference: {
-        publisher: 'Canonical'
-        offer: '0001-com-ubuntu-server-jammy'
-        sku: ubuntuOSVersion
-        version: 'latest'
-      }
+      imageReference: imageReference
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
@@ -272,13 +282,13 @@ resource virtualMachine2 'Microsoft.Compute/virtualMachines@2023-09-01' = {
         }
       ]
     }
-    securityProfile: {
+    securityProfile: osType == 'Ubuntu' ? {
       securityType: 'TrustedLaunch'
       uefiSettings: {
         secureBootEnabled: true
         vTpmEnabled: true
       }
-    }
+    } : null
   }
 }
 

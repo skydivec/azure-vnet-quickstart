@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.35.1.17967",
-      "templateHash": "10511571870534302712"
+      "version": "0.38.33.27573",
+      "templateHash": "5994704095096031709"
     }
   },
   "parameters": {
@@ -85,11 +85,29 @@
         "description": "Virtual machine size"
       }
     },
+    "osType": {
+      "type": "string",
+      "defaultValue": "Ubuntu",
+      "allowedValues": [
+        "Ubuntu",
+        "RHEL"
+      ],
+      "metadata": {
+        "description": "Operating system type"
+      }
+    },
     "ubuntuOSVersion": {
       "type": "string",
       "defaultValue": "22_04-lts-gen2",
       "metadata": {
         "description": "Ubuntu OS version"
+      }
+    },
+    "rhelOSVersion": {
+      "type": "string",
+      "defaultValue": "8_10",
+      "metadata": {
+        "description": "RHEL OS version"
       }
     }
   },
@@ -99,7 +117,8 @@
     "vm1Name": "vm-1",
     "vm2Name": "vm-2",
     "nic1Name": "nic-vm-1",
-    "nic2Name": "nic-vm-2"
+    "nic2Name": "nic-vm-2",
+    "imageReference": "[if(equals(parameters('osType'), 'Ubuntu'), createObject('publisher', 'Canonical', 'offer', '0001-com-ubuntu-server-jammy', 'sku', parameters('ubuntuOSVersion'), 'version', 'latest'), createObject('publisher', 'RedHat', 'offer', 'RHEL', 'sku', parameters('rhelOSVersion'), 'version', 'latest'))]"
   },
   "resources": [
     {
@@ -256,12 +275,7 @@
           }
         },
         "storageProfile": {
-          "imageReference": {
-            "publisher": "Canonical",
-            "offer": "0001-com-ubuntu-server-jammy",
-            "sku": "[parameters('ubuntuOSVersion')]",
-            "version": "latest"
-          },
+          "imageReference": "[variables('imageReference')]",
           "osDisk": {
             "createOption": "FromImage",
             "managedDisk": {
@@ -306,12 +320,7 @@
           }
         },
         "storageProfile": {
-          "imageReference": {
-            "publisher": "Canonical",
-            "offer": "0001-com-ubuntu-server-jammy",
-            "sku": "[parameters('ubuntuOSVersion')]",
-            "version": "latest"
-          },
+          "imageReference": "[variables('imageReference')]",
           "osDisk": {
             "createOption": "FromImage",
             "managedDisk": {

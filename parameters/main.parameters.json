@@ -6,34 +6,40 @@
       "value": "eastus2"
     },
     "vnetName": {
-      "value": "vnet-1"
+      "value": "vnet-rhel-gpu"
     },
     "vnetAddressPrefix": {
-      "value": "10.0.0.0/16"
+      "value": "10.1.0.0/16"
     },
     "subnetName": {
-      "value": "subnet-1"  
+      "value": "subnet-gpu"  
     },
     "subnetAddressPrefix": {
-      "value": "10.0.0.0/24"
+      "value": "10.1.0.0/24"
     },
     "enableBastion": {
       "value": true
     },
     "bastionName": {
-      "value": "bastion"
+      "value": "bastion-rhel"
     },
     "bastionSubnetPrefix": {
-      "value": "10.0.1.0/26"
+      "value": "10.1.1.0/26"
     },
     "adminUsername": {
       "value": "azureuser"
     },
     "vmSize": {
-      "value": "Standard_B2s"
+      "value": "Standard_NV6ads_A10_v5"
+    },
+    "osType": {
+      "value": "RHEL"
     },
     "ubuntuOSVersion": {
       "value": "22_04-lts-gen2"
+    },
+    "rhelOSVersion": {
+      "value": "8_10"
     }
   }
 }
