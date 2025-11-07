@@ -80,6 +80,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-09-01' = {
         name: subnetName
         properties: {
           addressPrefix: subnetAddressPrefix
+          // Security Best Practice: SFI-NS2.6.1 - Disable default outbound connectivity
+          defaultOutboundAccess: false
         }
       }
       // Conditionally add Bastion subnet if Bastion is enabled
@@ -88,6 +90,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-09-01' = {
           name: 'AzureBastionSubnet'
           properties: {
             addressPrefix: bastionSubnetPrefix
+            // Security Best Practice: SFI-NS2.6.1 - Disable default outbound connectivity
+            defaultOutboundAccess: false
           }
         }
       ] : [])

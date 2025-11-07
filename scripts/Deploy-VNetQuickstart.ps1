@@ -186,22 +186,40 @@ try {
     
     $duration = (Get-Date) - $startTime
     
-    if ($deployment.ProvisioningState -eq "Succeeded") {
+    # Parse the deployment output JSON into a PowerShell object
+    if ($deploymentOutput) {
+        $deployment = $deploymentOutput | ConvertFrom-Json
+        Write-Host "deployment name:" $deployment.properties.Name -ForegroundColor Cyan
+    }
+    else {
+        Write-Host "section 1" -ForegroundColor Cyan
+        Write-Error "Deployment failed: $($_.Exception.Message)"
+    }
+    if ($LASTEXITCODE -eq 0 -and $deployment.properties.provisioningState -eq "Succeeded") {
+        
         Write-Host "✓ Deployment completed successfully!" -ForegroundColor Green
         Write-Host "  Duration: $($duration.ToString('mm\:ss'))" -ForegroundColor Gray
         
         # Display outputs
         Write-Host "`nDeployment Results:" -ForegroundColor Cyan
         Write-Host "==================" -ForegroundColor Cyan
-        $deployment.Outputs.GetEnumerator() | ForEach-Object {
+        if ($deployment.properties.outputs -and $deployment.properties.outputs.Count -gt 0) {
+        
+        $deployment.properties.outputs.GetEnumerator() | ForEach-Object {
             Write-Host "$($_.Key): $($_.Value.Value)" -ForegroundColor White
+            }
+        }
+        else {
+            Write-Host "No outputs defined in template" -ForegroundColor Gray
         }
     }
     else {
-        Write-Error "Deployment failed with state: $($deployment.ProvisioningState)"
+        Write-Host "section 2" -ForegroundColor Cyan
+        Write-Error "Deployment failed with state: $($deployment.properties.provisioningState)"
     }
 }
 catch {
+    Write-Host "section 3" -ForegroundColor Cyan
     Write-Error "Deployment failed: $($_.Exception.Message)"
 }
 
