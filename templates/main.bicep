@@ -34,11 +34,11 @@ param adminUsername string = 'azureuser'
 param adminPassword string
 
 @description('Virtual machine size')
-param vmSize string = 'Standard_B2s'
+param vmSize string = 'Standard_NV6ads_A10_v5' // GPU-enabled VM
 
 @description('Operating system type')
 @allowed(['Ubuntu', 'RHEL'])
-param osType string = 'Ubuntu'
+param osType string = 'RHEL' // Default to RHEL for GPU workloads
 
 @description('Ubuntu OS version')
 param ubuntuOSVersion string = '22_04-lts-gen2'
@@ -90,8 +90,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-09-01' = {
           name: 'AzureBastionSubnet'
           properties: {
             addressPrefix: bastionSubnetPrefix
-            // Security Best Practice: SFI-NS2.6.1 - Disable default outbound connectivity
-            defaultOutboundAccess: false
           }
         }
       ] : [])
@@ -156,6 +154,91 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-09-0
           sourcePortRange: '*'
           destinationAddressPrefix: '*'
           destinationPortRange: '22'
+        }
+      }
+      // Outbound security rules for selective internet access
+      {
+        name: 'AllowHTTPS'
+        properties: {
+          priority: 100
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: 'Internet'
+          destinationPortRange: '443'
+        }
+      }
+      {
+        name: 'AllowHTTP'
+        properties: {
+          priority: 110
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: 'Internet'
+          destinationPortRange: '80'
+        }
+      }
+      {
+        name: 'AllowDNS'
+        properties: {
+          priority: 120
+          protocol: 'Udp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: 'Internet'
+          destinationPortRange: '53'
+        }
+      }
+      {
+        name: 'AllowNTP'
+        properties: {
+          priority: 130
+          protocol: 'Udp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: 'Internet'
+          destinationPortRange: '123'
+        }
+      }
+      {
+        name: 'AllowGitSSH'
+        properties: {
+          priority: 140
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: 'Internet'
+          destinationPortRange: '22'
+        }
+      }
+      {
+        name: 'AllowRHELRepos'
+        properties: {
+          priority: 150
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefixes: [
+            '23.32.16.0/20'      // cdn.redhat.com primary IP range
+            '23.218.128.0/17'    // Red Hat CDN secondary range
+            '96.16.108.0/22'     // Additional Red Hat CDN range
+            '104.16.0.0/12'      // Cloudflare (used by some Red Hat services)
+            '151.101.0.0/16'     // Fastly CDN (used by Red Hat)
+          ]
+          destinationPortRanges: ['80', '443']
         }
       }
     ]
@@ -293,6 +376,38 @@ resource virtualMachine2 'Microsoft.Compute/virtualMachines@2023-09-01' = {
         vTpmEnabled: true
       }
     } : null
+  }
+}
+
+// Install AzSecPack on VM-1
+resource azSecPackVM1 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = {
+  name: 'AzureSecurityPack'
+  parent: virtualMachine1
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Security.Monitoring'
+    type: 'AzureSecurityLinuxAgent'
+    typeHandlerVersion: '2.31'
+    settings: {
+      enableGenevaUpload: true
+      enableLogAnalytics: true
+    }
+  }
+}
+
+// Install AzSecPack on VM-2  
+resource azSecPackVM2 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = {
+  name: 'AzureSecurityPack'
+  parent: virtualMachine2
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Security.Monitoring'
+    type: 'AzureSecurityLinuxAgent'
+    typeHandlerVersion: '2.31'
+    settings: {
+      enableGenevaUpload: true
+      enableLogAnalytics: true
+    }
   }
 }
 

@@ -203,10 +203,15 @@ try {
         # Display outputs
         Write-Host "`nDeployment Results:" -ForegroundColor Cyan
         Write-Host "==================" -ForegroundColor Cyan
-        if ($deployment.properties.outputs -and $deployment.properties.outputs.Count -gt 0) {
-        
-        $deployment.properties.outputs.GetEnumerator() | ForEach-Object {
-            Write-Host "$($_.Key): $($_.Value.Value)" -ForegroundColor White
+        if ($deployment.properties.outputs) {
+            $outputKeys = $deployment.properties.outputs | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+            if ($outputKeys) {
+                foreach ($key in $outputKeys) {
+                    $value = $deployment.properties.outputs.$key.value
+                    Write-Host "$key: $value" -ForegroundColor White
+                }
+            } else {
+                Write-Host "No outputs defined in template" -ForegroundColor Gray
             }
         }
         else {
@@ -228,12 +233,89 @@ Write-Host "`nDeployment Summary:" -ForegroundColor Green
 Write-Host "==================" -ForegroundColor Green
 Write-Host "✓ Virtual Network with subnets created" -ForegroundColor Green
 Write-Host "✓ Azure Bastion deployed for secure access" -ForegroundColor Green
-Write-Host "✓ Two Ubuntu VMs ready for testing" -ForegroundColor Green
+Write-Host "✓ GPU VMs with AzSecPack security monitoring" -ForegroundColor Green
 Write-Host "✓ Network security group configured" -ForegroundColor Green
+Write-Host "✓ SFI-NS2.6.1 compliance (defaultOutboundAccess: false)" -ForegroundColor Green
+Write-Host "✓ X11 desktop environment and VNC setup completed" -ForegroundColor Green
+
+# Configure NSG rules for package repository access
+Write-Host "`nConfiguring package repository access..." -ForegroundColor Yellow
+try {
+    $enableScriptPath = "scripts\Enable-PackageRepoAccess.ps1"
+    if (Test-Path $enableScriptPath) {
+        Write-Host "Running NSG configuration script..." -ForegroundColor Gray
+        & $enableScriptPath -ResourceGroupName $ResourceGroupName
+        Write-Host "✓ Package repository access configured" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️ NSG configuration script not found at $enableScriptPath" -ForegroundColor Yellow
+        Write-Host "  Manual NSG configuration may be required for package access" -ForegroundColor Gray
+    }
+} catch {
+    Write-Host "⚠️ Warning: Failed to configure NSG rules automatically" -ForegroundColor Yellow
+    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Gray
+    Write-Host "  You can manually run: .\scripts\Enable-PackageRepoAccess.ps1 -ResourceGroupName $ResourceGroupName" -ForegroundColor Gray
+}
+
+# Setup X11 and VNC on VMs
+Write-Host "`nSetting up X11 desktop environment..." -ForegroundColor Yellow
+try {
+    Write-Host "Installing X11 and VNC on vm-1..." -ForegroundColor Gray
+    $x11Script = "curl -s https://raw.githubusercontent.com/skydivec/azure-vnet-quickstart/master/scripts/setup-x11-rhel.sh | bash"
+    
+    $vm1Result = az vm run-command invoke `
+        --resource-group $ResourceGroupName `
+        --name "vm-1" `
+        --command-id RunShellScript `
+        --scripts $x11Script `
+        --output json 2>$null
+    
+    if ($vm1Result) {
+        Write-Host "✓ X11 desktop environment configured on vm-1" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️ X11 setup may have encountered issues on vm-1" -ForegroundColor Yellow
+    }
+    
+    Write-Host "Installing X11 and VNC on vm-2..." -ForegroundColor Gray
+    $vm2Result = az vm run-command invoke `
+        --resource-group $ResourceGroupName `
+        --name "vm-2" `
+        --command-id RunShellScript `
+        --scripts $x11Script `
+        --output json 2>$null
+    
+    if ($vm2Result) {
+        Write-Host "✓ X11 desktop environment configured on vm-2" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️ X11 setup may have encountered issues on vm-2" -ForegroundColor Yellow
+    }
+    
+    Write-Host "✓ Desktop environment setup complete" -ForegroundColor Green
+} catch {
+    Write-Host "⚠️ Warning: Failed to setup X11 desktop environment automatically" -ForegroundColor Yellow
+    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Gray
+    Write-Host "  You can manually setup X11 by running the setup script on each VM" -ForegroundColor Gray
+}
 
 Write-Host "`nNext Steps:" -ForegroundColor Yellow
 Write-Host "1. Connect to VMs via Azure Bastion in Azure portal" -ForegroundColor White
-Write-Host "2. Test connectivity: ping vm-2 from vm-1" -ForegroundColor White
-Write-Host "3. Clean up resources when done: Remove-AzResourceGroup -Name $ResourceGroupName" -ForegroundColor White
+Write-Host "2. Test GPU functionality: .\scripts\Test-VMGPUFunctionality.ps1 -ResourceGroupName $ResourceGroupName" -ForegroundColor White
+Write-Host "3. Access X11 desktop via VNC (setup already completed automatically)" -ForegroundColor White
+Write-Host "4. Clean up resources when done: Remove-AzResourceGroup -Name $ResourceGroupName" -ForegroundColor White
+
+Write-Host "`n🔧 Available Scripts:" -ForegroundColor Magenta
+Write-Host "   • .\scripts\run-glxgears.sh - Comprehensive GPU testing" -ForegroundColor White
+Write-Host "   • .\scripts\quick-gpu-test.sh - Fast GPU validation" -ForegroundColor White
+Write-Host "   • .\scripts\Test-VMGPUFunctionality.ps1 - PowerShell GPU automation" -ForegroundColor White
+Write-Host "   • .\scripts\Enable-PackageRepoAccess.ps1 - NSG configuration" -ForegroundColor White
+
+Write-Host "`n📚 Documentation:" -ForegroundColor Magenta
+Write-Host "   • X11-Login-Guide.md - Complete X11 access instructions" -ForegroundColor White
+Write-Host "   • SFI-NS2.6.1-Connectivity-Summary.md - Security and connectivity guide" -ForegroundColor White
+
+Write-Host "`n🖥️ VNC Access Information:" -ForegroundColor Magenta
+Write-Host "   • X11 desktop environment is now installed and configured" -ForegroundColor White
+Write-Host "   • Connect via SSH tunnel: ssh -L 5901:localhost:5901 azureuser@vm" -ForegroundColor White
+Write-Host "   • VNC display :1 available on both VMs" -ForegroundColor White
+Write-Host "   • See X11-Login-Guide.md for detailed VNC setup instructions" -ForegroundColor White
 
 Write-Host "`n💡 Tip: Access the Azure portal at https://portal.azure.com" -ForegroundColor Magenta

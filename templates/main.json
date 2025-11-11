@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "5994704095096031709"
+      "templateHash": "12461189058834921584"
     }
   },
   "parameters": {
@@ -80,14 +80,14 @@
     },
     "vmSize": {
       "type": "string",
-      "defaultValue": "Standard_B2s",
+      "defaultValue": "Standard_NV6ads_A10_v5",
       "metadata": {
         "description": "Virtual machine size"
       }
     },
     "osType": {
       "type": "string",
-      "defaultValue": "Ubuntu",
+      "defaultValue": "RHEL",
       "allowedValues": [
         "Ubuntu",
         "RHEL"
@@ -132,7 +132,7 @@
             "[parameters('vnetAddressPrefix')]"
           ]
         },
-        "subnets": "[flatten(createArray(createArray(createObject('name', parameters('subnetName'), 'properties', createObject('addressPrefix', parameters('subnetAddressPrefix')))), if(parameters('enableBastion'), createArray(createObject('name', 'AzureBastionSubnet', 'properties', createObject('addressPrefix', parameters('bastionSubnetPrefix')))), createArray())))]"
+        "subnets": "[flatten(createArray(createArray(createObject('name', parameters('subnetName'), 'properties', createObject('addressPrefix', parameters('subnetAddressPrefix'), 'defaultOutboundAccess', false()))), if(parameters('enableBastion'), createArray(createObject('name', 'AzureBastionSubnet', 'properties', createObject('addressPrefix', parameters('bastionSubnetPrefix')))), createArray())))]"
       }
     },
     {
@@ -200,6 +200,93 @@
               "sourcePortRange": "*",
               "destinationAddressPrefix": "*",
               "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "priority": 100,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "Internet",
+              "destinationPortRange": "443"
+            }
+          },
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "priority": 110,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "Internet",
+              "destinationPortRange": "80"
+            }
+          },
+          {
+            "name": "AllowDNS",
+            "properties": {
+              "priority": 120,
+              "protocol": "Udp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "Internet",
+              "destinationPortRange": "53"
+            }
+          },
+          {
+            "name": "AllowNTP",
+            "properties": {
+              "priority": 130,
+              "protocol": "Udp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "Internet",
+              "destinationPortRange": "123"
+            }
+          },
+          {
+            "name": "AllowGitSSH",
+            "properties": {
+              "priority": 140,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "Internet",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "AllowRHELRepos",
+            "properties": {
+              "priority": 150,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Outbound",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefixes": [
+                "23.32.16.0/20",
+                "23.218.128.0/17",
+                "96.16.108.0/22",
+                "104.16.0.0/12",
+                "151.101.0.0/16"
+              ],
+              "destinationPortRanges": [
+                "80",
+                "443"
+              ]
             }
           }
         ]
@@ -290,13 +377,7 @@
             }
           ]
         },
-        "securityProfile": {
-          "securityType": "TrustedLaunch",
-          "uefiSettings": {
-            "secureBootEnabled": true,
-            "vTpmEnabled": true
-          }
-        }
+        "securityProfile": "[if(equals(parameters('osType'), 'Ubuntu'), createObject('securityType', 'TrustedLaunch', 'uefiSettings', createObject('secureBootEnabled', true(), 'vTpmEnabled', true())), null())]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nic1Name'))]"
@@ -335,16 +416,46 @@
             }
           ]
         },
-        "securityProfile": {
-          "securityType": "TrustedLaunch",
-          "uefiSettings": {
-            "secureBootEnabled": true,
-            "vTpmEnabled": true
-          }
-        }
+        "securityProfile": "[if(equals(parameters('osType'), 'Ubuntu'), createObject('securityType', 'TrustedLaunch', 'uefiSettings', createObject('secureBootEnabled', true(), 'vTpmEnabled', true())), null())]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nic2Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}', variables('vm1Name'), 'AzureSecurityPack')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publisher": "Microsoft.Azure.Security.Monitoring",
+        "type": "AzureSecurityLinuxAgent",
+        "typeHandlerVersion": "2.31",
+        "settings": {
+          "enableGenevaUpload": true,
+          "enableLogAnalytics": true
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm1Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}', variables('vm2Name'), 'AzureSecurityPack')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publisher": "Microsoft.Azure.Security.Monitoring",
+        "type": "AzureSecurityLinuxAgent",
+        "typeHandlerVersion": "2.31",
+        "settings": {
+          "enableGenevaUpload": true,
+          "enableLogAnalytics": true
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm2Name'))]"
       ]
     }
   ],
